@@ -99,7 +99,7 @@ commands.set("modlogin", {
   eval: function (client, args, argsSplit) {
     if (client.rank >= 2) return
     if (!args) return
-    if (args !== process.env.MODLOGIN) {
+    if (args !== process.env.MODPASS) {
       client.destroy()
       return
     }
@@ -117,7 +117,7 @@ commands.set("adminlogin", {
   eval: function (client, args, argsSplit) {
     if (client.rank >= 3) return
     if (!args) return
-    if (args !== process.env.ADMINLOGIN) {
+    if (args !== process.env.ADMINPASS) {
       client.destroy()
       return
     }
@@ -499,7 +499,7 @@ commands.set("kickip", {
     }
     let target = client.server.ips.map.get(args)
     if (!target || target.constructor === Promise || target.clients.size === 0) {
-      client.sendString("Error: That user is offline.")
+      client.sendString("Error: No online clients found.")
       return
     }
     client.sendString(`Kicked IP ${target.ip}`)

@@ -67,32 +67,44 @@ export class Server {
           }
           ip = await this.ips.fetch(ip)
           if (aborted) return
-          if (!this.destroyed) {
+          if (this.destroyed) {
+            res.writeStatus("503 Service Unavailable")
+            res.end()
+          } else {
             res.upgrade({
               origin,
               ip,
               closed: false
             }, secWebSocketKey, secWebSocketProtocol, secWebSocketExtensions, context)
-          } else {
-            res.writeStatus("503 Service Unavailable")
-            res.end()
           }
         } catch (error) {
           console.error(error)
         }
       },
       open: ws => {
-        this.stats.totalConnections++
-        let client = this.clients.createClient(ws)
-        ws.client = client
-        client.startProtocol()
+        try {
+          this.stats.totalConnections++
+          let client = this.clients.createClient(ws)
+          ws.client = client
+          client.startProtocol()
+        } catch (error) {
+          console.error(error)
+        }
       },
       message: (ws, message, isBinary) => {
-        ws.client.handleMessage(message, isBinary)
+        try {
+          ws.client.handleMessage(message, isBinary)
+        } catch (error) {
+          console.error(error)
+        }
       },
       close: (ws, code, message) => {
-        ws.closed = true
-        ws.client.destroy()
+        try {
+          ws.closed = true
+          ws.client.destroy()
+        } catch (error) {
+          console.error(error)
+        }
       }
     })
     server.any("/*", (res, req) => {
@@ -137,7 +149,7 @@ export class Server {
 
   adminMessage(message) {
     let arrayBuffer = textEncoder.encode(message).buffer
-    for (let client of this.clients.values()) {
+    for (let client of this.clients.map.values()) {
       if (client.rank < 3) continue
       client.ws.send(arrayBuffer, false)
     }
@@ -145,7 +157,7 @@ export class Server {
 
   broadcastMessage(message) {
     let arrayBuffer = textEncoder.encode(message).buffer
-    for (let client of this.clients.values()) {
+    for (let client of this.clients.map.values()) {
       client.ws.send(arrayBuffer, false)
     }
   }
