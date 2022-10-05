@@ -1,6 +1,6 @@
 import { loadProtection, loadPixels, saveData } from "./regionData.js"
 
-let primaryBuffer = Buffer.allocUnsafeSlow(182)
+let primaryBuffer = Buffer.allocUnsafeSlow(184)
 primaryBuffer[0] = 0x02
 primaryBuffer.writeUint16LE(768, 10)
 let secondaryBuffer = Buffer.allocUnsafeSlow(768)
