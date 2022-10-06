@@ -13,8 +13,8 @@ export class Ip {
     this.captchaquota = new Quota(5, 10, tick)
 
     if (data === null) {
-      this.ban = 0
-      this.whitelisted = false
+      this.banExpiration = 0
+      this.whitelist = -1
       this.dataModified = false
     } else {
       data = JSON.parse(data)
@@ -36,8 +36,8 @@ export class Ip {
       return
     }
     let data = {
-      ban: this.ban,
-      whitelisted: this.whitelisted
+      banExpiration: this.banExpiration,
+      whitelist: this.whitelist
     }
     this.serverIpManager.ipDestroyed(this, JSON.stringify(data))
   }
@@ -70,5 +70,11 @@ export class Ip {
     for (let client of this.clients.values()) {
       client.destroy()
     }
+  }
+
+  ban(time) {
+    this.setProp("banExpiration", time)
+    if (time === -1 || time >= Date.now()) this.kick()
+    this.server.adminMessage(`DEVBanned IP: ${this.ip}, until T${time}`)
   }
 }

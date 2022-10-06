@@ -1,4 +1,4 @@
-import { validateQuotaString } from "../util/util.js"
+import { validateQuotaString, parseColor } from "../util/util.js"
 
 export const commands = new Map()
 
@@ -17,19 +17,7 @@ commands.set("nick", {
       client.sendString(`Nickname too long! (Max: ${maxLength})`)
       return
     }
-    let nickToSet
-    switch (client.rank) {
-      case 3:
-        nickToSet = nick
-        break
-      case 2:
-        nickToSet = `${client.world.modPrefix} ${nick}`
-        break
-      case 1:
-      case 0:
-        nickToSet = `[${client.uid}] ${nick}`
-    }
-    client.nick = nickToSet
+    client.nick = nick
     client.sendString(`Nickname set to: '${nick}'`)
   }
 })
@@ -248,6 +236,7 @@ commands.set("whois", {
     }
     client.sendString(`-> Origin header: ${target.ws.origin}`)
     client.sendString(`-> Rank: ${target.rank}`)
+    client.sendString(`-> Nick: ${target.getNick()}`)
   }
 })
 commands.set("mute", {
@@ -404,7 +393,7 @@ commands.set("config", {
           return
         }
         if (!validateQuotaString(argsSplit[1])) {
-          client.sendString("Error: Invalid pquota, make sure it follows the format (amount),(seconds) and no values are greater than 65536 or less than 0.")
+          client.sendString("Error: Invalid pquota, make sure it follows the format (amount),(seconds) and no values are greater than 65535 or less than 0.")
           return
         }
         if (argsSplit[1] !== client.server.config.defaultPquota) client.server.adminMessage(`DEVDefault pquota set to: ${argsSplit[1]}`)
@@ -475,7 +464,7 @@ commands.set("config", {
           return
         }
         if (!validateQuotaString(argsSplit[1])) {
-          client.sendString("Error: Invalid region load quota, make sure it follows the format (amount),(seconds) and no values are greater than 65536 or less than 0.")
+          client.sendString("Error: Invalid region load quota, make sure it follows the format (amount),(seconds) and no values are greater than 65535 or less than 0.")
           return
         }
         if (argsSplit[1] !== client.server.config.regionloadquota) client.server.adminMessage(`DEVRegion load quota set to: ${argsSplit[1]}`)
@@ -505,5 +494,360 @@ commands.set("kickip", {
     client.sendString(`Kicked IP ${target.ip}`)
     target.kick()
     client.server.adminMessage(`DEVKicked IP: ${target.ip}`)
+  }
+})
+commands.set("banid", {
+  minRank: 3,
+  hidden: false,
+  eval: function (client, args, argsSplit) {
+    if (argsSplit.length < 2) {
+      client.sendString("Usage: /banid ID MINUTES (-1 for infinite)")
+      return
+    }
+    let time = parseInt(argsSplit[1])
+    if (!(time > 0 || time === -1)) {
+      client.sendString("Usage: /banid ID MINUTES (-1 for infinite)")
+      return
+    }
+    let id = parseInt(argsSplit[0])
+    let target = client.world.clients.get(id)
+    if (!target) {
+      client.sendString("Error: User does not exist")
+      return
+    }
+    let expirationTime = time === -1 ? -1 : Date.now() + time * 60000
+    client.sendString(`Banned ${target.uid} for ${time} minutes`)
+    target.ip.ban(expirationTime)
+  }
+})
+commands.set("banip", {
+  minRank: 3,
+  hidden: false,
+  eval: async function (client, args, argsSplit) {
+    if (argsSplit.length < 2) {
+      client.sendString("Usage: /banip IP MINUTES (-1 for infinite)")
+      return
+    }
+    let time = parseInt(argsSplit[1])
+    if (!(time > 0 || time === -1)) {
+      client.sendString("Usage: /banip IP MINUTES (-1 for infinite)")
+      return
+    }
+    let target = await client.server.ips.fetch(argsSplit[0])
+    let expirationTime = time === -1 ? -1 : Date.now() + time * 60000
+    if (!client.destroyed) client.sendString(`Banned ${argsSplit[0]} for ${time} minutes`)
+    target.ban(expirationTime)
+  }
+})
+commands.set("whitelist", {
+  minRank: 3,
+  hidden: false,
+  eval: async function (client, args, argsSplit) {
+    switch (argsSplit[0]) {
+      case "clear": {
+        client.server.resetWhitelist()
+        client.sendString("Cleared whitelist.")
+        return
+      }
+      case "add": {
+        if (argsSplit.length < 2) {
+          client.sendString("Usage: /whitelist add [IP]")
+          return
+        }
+        let target = await client.server.ips.fetch(argsSplit[1])
+        target.setProp("whitelist", client.server.whitelistId)
+        if (!client.destroyed) client.sendString(`Whitelisted IP: ${argsSplit[1]}`)
+        return
+      }
+      case "remove": {
+        if (argsSplit.length < 2) {
+          client.sendString("Usage: /whitelist remove [IP]")
+          return
+        }
+        let target = await client.server.ips.fetch(argsSplit[1])
+        target.setProp("whitelist", -1)
+        if (!client.destroyed) client.sendString(`Unwhitelisted IP: ${argsSplit[1]}`)
+        return
+      }
+      case "check": {
+        if (argsSplit.length < 2) {
+          client.sendString("Usage: /whitelist check [IP]")
+          return
+        }
+        let target = await client.server.ips.fetch(argsSplit[1])
+        if (!client.destroyed) client.sendString(`IP ${argsSplit[1]} is ${target.whitelist === client.server.whitelistId ? "" : "not "}whitelisted.`)
+        return
+      }
+      default: {
+        client.sendString("Usage: /whitelist (clear, add, remove, check) [IP]")
+      }
+    }
+  }
+})
+commands.set("bans", {
+  minRank: 3,
+  hidden: false,
+  eval: async function (client, args, argsSplit) {
+    switch (argsSplit[0]) {
+      case "add": {
+        if (argsSplit.length < 3) {
+          client.sendString("Usage: /bans add [IP] [UNIX_TIME]")
+          return
+        }
+        let timestamp = parseInt(argsSplit[2])
+        if (isNaN(timestamp)) {
+          client.sendString("Usage: /bans add [IP] [UNIX_TIME]")
+          return
+        }
+        let target = await client.server.ips.fetch(argsSplit[1])
+        if (!client.destroyed) client.sendString(`Banned ${argsSplit[1]} until ${timestamp}`)
+        target.ban(timestamp)
+        return
+      }
+      case "remove": {
+        if (argsSplit.length < 2) {
+          client.sendString("Usage: /bans remove [IP]")
+          return
+        }
+        let target = await client.server.ips.fetch(argsSplit[1])
+        if (!client.destroyed) client.sendString(`Unbanned IP: ${argsSplit[1]}`)
+        target.setProp("banExpiration", 0)
+        client.server.adminMessage(`Unbanned IP: ${argsSplit[1]}`)
+        return
+      }
+      case "check": {
+        if (argsSplit.length < 2) {
+          client.sendString("Usage: /bans check [IP]")
+          return
+        }
+        let target = await client.server.ips.fetch(argsSplit[1])
+        if (client.destroyed) return
+        if (target.banExpiration >= Date.now()) {
+          client.sendString(`IP ${argsSplit[1]} is banned until ${target.banExpiration}, for ${Math.floor((target.banExpiration - Date.now()) / 1000)} seconds.`)
+        } else if (target.banExpiration === -1) {
+          client.sendString(`IP ${argsSplit[1]} is forever.`)
+        } else {
+          client.sendString(`IP ${argsSplit[1]} is not banned.`)
+        }
+        return
+      }
+      default: {
+        client.sendString("Usage: /bans (add, remove, check) [IP] [UNIX_TIME]")
+      }
+    }
+  }
+})
+commands.set("kickall", {
+  minRank: 3,
+  hidden: false,
+  eval: function (client, args, argsSplit) {
+    if (args === "all") {
+      let count = client.server.kickNonAdmins()
+      client.sendString(`Kicked ${count} clients from the server.`)
+      client.server.adminMessage("DEVKicked all non-admins from the server")
+    } else if (args === "world") {
+      let count = client.world.kickNonAdmins()
+      client.sendString(`Kicked ${count} clients from the world.`)
+      client.server.adminMessage(`DEVKicked all non-admins from ${client.world.name}`)
+    } else {
+      client.sendString("Kicks everyone from the world or the server, except admins.")
+      client.sendString("Usage: /kickall (world, all)")
+      return
+    }
+  }
+})
+let worldProps = ["restricted", "pass", "modpass", "pquota", "motd", "bgcolor", "doubleModPquota", "pastingAllowed", "maxPlayers", "maxTpDistance", "modPrefix", "allowGlobalMods", "simpleMods"]
+function formatPropValue(prop, value) {
+  if (prop === "bgcolor") {
+    return `#${value.toString(16).padStart(6, "0")}`
+  }
+  return value
+}
+commands.set("getprop", {
+  minRank: 3,
+  hidden: false,
+  eval: function (client, args, argsSplit) {
+    if (!worldProps.includes(args) && args !== "all") {
+      client.sendString(`Usage: /getprop (all/${worldProps.join("/")})`)
+      return
+    }
+    if (args === "all") {
+      for (let prop of worldProps) {
+        let value = client.world[prop]
+        if (value === null) {
+          client.sendString(`World property: '${prop}' has no value`)
+        } else {
+          let formatted = formatPropValue(prop, value)
+          client.sendString(`World property: '${prop}' is '${formatted}'`)
+        }
+      }
+      return
+    }
+    let value = client.world[args]
+    if (value === null) {
+      client.sendString(`World property: '${args}' has no value`)
+    } else {
+      let formatted = formatPropValue(args, value)
+      client.sendString(`World property: '${args}' is '${formatted}'`)
+    }
+  }
+})
+commands.set("setprop", {
+  minRank: 3,
+  hidden: false,
+  eval: function (client, args, argsSplit) {
+    if (argsSplit.length < 2 || !worldProps.includes(argsSplit[0])) {
+      client.sendString(`Usage: /setprop (${worldProps.join("/")}) [VALUE]`)
+      return
+    }
+    let valueInput = args.substring(args.indexOf(" ") + 1)
+    let valueToSet
+    switch (argsSplit[0]) {
+      case "restricted": {
+        valueToSet = valueInput === "true"
+        break
+      }
+      case "pass": {
+        valueToSet = valueInput
+        break
+      }
+      case "modpass": {
+        valueToSet = valueInput
+        break
+      }
+      case "pquota": {
+        if (!validateQuotaString(valueInput)) {
+          client.sendString("Error: Invalid pquota, make sure it follows the format (amount),(seconds) and no values are greater than 65535 or less than 0.")
+          return
+        }
+        valueToSet = valueInput
+        break
+      }
+      case "motd": {
+        valueToSet = valueInput
+        break
+      }
+      case "bgcolor": {
+        valueToSet = parseColor(valueInput)
+        if (valueToSet === false) {
+          client.sendString("Error: Invalid color, must be hexadecimal.")
+          return
+        }
+        break
+      }
+      case "doubleModPquota": {
+        valueToSet = valueInput === "true"
+        break
+      }
+      case "pastingAllowed": {
+        valueToSet = valueInput === "true"
+        break
+      }
+      case "maxPlayers": {
+        valueToSet = parseInt(valueInput)
+        if (!(valueToSet >= 1 && valueToSet <= 255)) {
+          client.sendString("Error: Invalid limit, must be between 1 and 255.")
+          return
+        }
+        break
+      }
+      case "maxTpDistance": {
+        valueToSet = parseInt(valueInput)
+        if (!(valueToSet >= -1 && valueToSet <= 134217728)) {
+          client.sendString("Error: Invalid maximum distance, must be between -1 and 134217728.")
+          return
+        }
+        break
+      }
+      case "modPrefix": {
+        valueToSet = valueInput
+        break
+      }
+      case "allowGlobalMods": {
+        valueToSet = valueInput === "true"
+        break
+      }
+      case "simpleMods": {
+        valueToSet = valueInput === "true"
+        break
+      }
+    }
+    client.world.setProp(argsSplit[0], valueToSet)
+    let formatted = formatPropValue(argsSplit[0], valueToSet)
+    client.sendString(`Set property '${argsSplit[0]}' to '${formatted}'`)
+    client.server.adminMessage(`DEVSet ${client.world.name}'s property - key: '${argsSplit[0]}' value: '${formatted}'`)
+  }
+})
+commands.set("resetprop", {
+  minRank: 3,
+  hidden: false,
+  eval: function (client, args, argsSplit) {
+    if (!worldProps.includes(args)) {
+      client.sendString(`Usage: /resetprop (${worldProps.join("/")})`)
+      return
+    }
+    let valueToSet
+    switch (args) {
+      case "restricted": {
+        valueToSet = false
+        break
+      }
+      case "pass": {
+        valueToSet = null
+        break
+      }
+      case "modpass": {
+        valueToSet = null
+        break
+      }
+      case "pquota": {
+        valueToSet = null
+        break
+      }
+      case "motd": {
+        valueToSet = null
+        break
+      }
+      case "bgcolor": {
+        valueToSet = 0xffffff
+        break
+      }
+      case "doubleModPquota": {
+        valueToSet = true
+        break
+      }
+      case "pastingAllowed": {
+        valueToSet = true
+        break
+      }
+      case "maxPlayers": {
+        valueToSet = 255
+        break
+      }
+      case "maxTpDistance": {
+        valueToSet = 5000000
+        break
+      }
+      case "modPrefix": {
+        valueToSet = "(M)"
+        break
+      }
+      case "allowGlobalMods": {
+        valueToSet = true
+        break
+      }
+      case "simpleMods": {
+        valueToSet = false
+        break
+      }
+    }
+    if (valueToSet === null) {
+      client.sendString(`Set property '${args}' to null`)
+    } else {
+      let formatted = formatPropValue(args, valueToSet)
+      client.sendString(`Set property '${args}' to '${formatted}'`)
+    }
+    client.world.setProp(args, valueToSet)
+    client.server.adminMessage(`DEVReset ${client.world.name}'s property - key: '${args}'`)
   }
 })

@@ -35,10 +35,11 @@ export class Client {
     this.rank = 0
     this.world = null
     this.uid = null
-    this.pquota = null
-    this.cquota = new Quota(4, 6, tick)
+    let pquota = this.server.config.defaultPquota.split(",").map(value => parseInt(value))
+    this.pquota = new Quota(pquota[0], pquota[1], tick, true)
+    this.cquota = new Quota(4, 6, tick, false)
     let regionloadquota = this.server.config.regionloadquota.split(",").map(value => parseInt(value))
-    this.regionloadquota = new Quota(regionloadquota[0], regionloadquota[1], tick)
+    this.regionloadquota = new Quota(regionloadquota[0], regionloadquota[1], tick, false)
     this.captchaState = null
     this.joiningWorld = false
     this.nick = null
@@ -79,9 +80,9 @@ export class Client {
   }
 
   keepAlive(tick) {
-    if (!this.world) return tick - this.connectionTick < 9000
+    if (!this.world) return tick - this.connectionTick < 9000 //10 minutes (time to solve captcha)
     if (this.rank >= 3) return true
-    return tick - this.lastUpdate < 9000
+    return tick - this.lastUpdate < 18000 //20 minutes
   }
 
   sendBuffer(buffer) {
@@ -93,7 +94,11 @@ export class Client {
   }
 
   getNick() {
-    if (this.nick) return this.nick
+    if (this.nick) {
+      if (this.rank === 3) return this.nick
+      if (this.rank === 2) return `${this.world.modPrefix} ${this.nick}`
+      return `[${this.uid}] ${this.nick}`
+    }
     if (this.rank === 3) return `(A) ${this.uid}`
     if (this.rank === 2) return `${this.world.modPrefix} ${this.uid}`
     return this.uid.toString()
@@ -108,7 +113,7 @@ export class Client {
   }
 
   setPquota(amount, seconds) {
-    this.pquota = new Quota(amount, seconds, this.server.currentTick)
+    this.pquota.setParams(amount, seconds, this.server.currentTick)
     let buffer = Buffer.allocUnsafeSlow(5)
     buffer[0] = 0x06
     buffer.writeUint16LE(amount, 1)
@@ -131,7 +136,7 @@ export class Client {
         break
       }
       case 2: {
-        if (this.world.doubleModPQuota) pquota[1] = Math.ceil(pquota[1] / 2)
+        if (this.world.doubleModPquota) pquota[1] = Math.ceil(pquota[1] / 2)
         break
       }
       case 3: {
@@ -139,7 +144,7 @@ export class Client {
         break
       }
     }
-    this.setPquota(pquota[0], pquota[1])
+    this.setPquota(pquota[0], pquota[1], this.server.currentTick)
     this.rank = rank
     let buffer = Buffer.allocUnsafeSlow(2)
     buffer[0] = 0x04
@@ -153,19 +158,19 @@ export class Client {
   }
 
   startProtocol() {
-    if (this.ip.ban !== 0) {
-      if (this.ip.ban === -1) {
+    if (this.ip.banExpiration !== 0) {
+      if (this.ip.banExpiration === -1) {
         this.sendString(`You are banned. ${this.server.config.appealMessage}`)
         this.destroy()
         return
       }
-      if (this.ip.ban > Date.now()) {
-        this.sendString(`Remaining time: ${Math.floor((this.ip.ban - Date.now()) / 1000)} seconds`)
+      if (this.ip.banExpiration > Date.now()) {
+        this.sendString(`Remaining time: ${Math.floor((this.ip.banExpiration - Date.now()) / 1000)} seconds`)
         this.sendString(`You are banned. ${this.server.config.appealMessage}`)
         this.destroy()
         return
       }
-      this.ip.setBan(0)
+      this.ip.setProp("banExpiration", 0)
     }
     if (this.ip.tooManyClients()) {
       this.sendString(`Sorry, but you have reached the maximum number of simultaneous connections, (${this.server.config.maxConnectionsPerIp}).`)
@@ -179,7 +184,7 @@ export class Client {
         break
       }
       case 1: {
-        requiresVerification = !this.ip.whitelisted
+        requiresVerification = this.ip.whitelist === this.server.whitelistId
         break
       }
       case 2: {
@@ -258,7 +263,7 @@ export class Client {
           let xDistance = (x >> 4) - (this.x >> 8)
           let yDistance = (y >> 4) - (this.y >> 8)
           let distance = Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2))
-          if (distance > 3) return
+          if (distance > 4) return
         }
         let regionId = ((x >> 8) + 0x10000) + (((y >> 8) + 0x10000) * 0x20000)
         let region = this.world.getRegion(regionId)
@@ -574,8 +579,7 @@ export class Client {
       this.destroy()
       return
     }
-    this.ip.setProp("whitelisted", true)
-    this.setCaptchaState(0x02)
+    this.ip.setProp("whitelist", this.server.whitelistId)
     this.setCaptchaState(0x03)
   }
 

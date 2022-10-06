@@ -21,3 +21,8 @@ export function validateQuotaString(string) {
   if (parseInt(split[1]) > 65535) return false
   return true
 }
+
+export function parseColor(string) {
+  if (!string.match(/^#[A-Fa-f0-9]{6}$/)) return false
+  return parseInt(string.substring(1), 16)
+}

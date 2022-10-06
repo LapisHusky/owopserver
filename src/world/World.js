@@ -19,7 +19,7 @@ export class World {
       this.pquota = null
       this.motd = null
       this.bgcolor = 0xffffff
-      this.doubleModPQuota = true
+      this.doubleModPquota = true
       this.pastingAllowed = true
       this.maxPlayers = 255
       this.maxTpDistance = 5000000
@@ -64,7 +64,7 @@ export class World {
       pquota: this.pquota,
       motd: this.motd,
       bgcolor: this.bgcolor,
-      doubleModPQuota: this.doubleModPQuota,
+      doubleModPquota: this.doubleModPquota,
       pastingAllowed: this.pastingAllowed,
       maxPlayers: this.maxPlayers,
       maxTpDistance: this.maxTpDistance,
@@ -192,5 +192,15 @@ export class World {
     this.pixelUpdates = []
     this.playerDisconnects = []
     this.broadcastBuffer(buffer)
+  }
+
+  kickNonAdmins() {
+    let count = 0
+    for (let client of this.clients.values()) {
+      if (client.rank === 3) continue
+      client.destroy()
+      count++
+    }
+    return count
   }
 }

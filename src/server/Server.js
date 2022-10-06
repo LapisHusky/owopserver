@@ -4,6 +4,7 @@ import { ServerIpManager } from "../ip/ServerIpManager.js"
 import { ServerWorldManager } from "../world/ServerWorldManager.js"
 import { StatsTracker } from "../stats/StatsTracker.js"
 import { ServerRegionManager } from "../region/ServerRegionManager.js"
+import { data as miscData, saveAndClose } from "./miscData.js"
 
 let textEncoder = new TextEncoder()
 let textDecoder = new TextDecoder()
@@ -25,6 +26,8 @@ export class Server {
     this.tickTimeout = this.setTickTimeout()
 
     this.stats = new StatsTracker(this)
+
+    this.whitelistId = miscData.whitelistId
     
     this.destroyed = false
   }
@@ -38,6 +41,7 @@ export class Server {
     await this.worlds.destroy()
     await this.regions.destroy()
     await this.ips.destroy()
+    await saveAndClose()
   }
 
   createServer() {
@@ -161,6 +165,21 @@ export class Server {
       client.ws.send(arrayBuffer, false)
     }
   }
+
+  resetWhitelist() {
+    this.whitelistId++
+    miscData.whitelistId = this.whitelistId
+  }
+
+  kickNonAdmins() {
+    let count = 0
+    for (let client of this.clients.map.values()) {
+      if (client.rank === 3) continue
+      client.destroy()
+      count++
+    }
+    return count
+  }
 }
 
 //simple way to keep track of the server's performance
@@ -170,6 +189,6 @@ setInterval(() => {
   let newUsage = process.cpuUsage().user
   let diff = newUsage - usage
   usage = newUsage
-  console.log(diff / 10000000)
-}, 10000)
+  console.log(diff / 1000000)
+}, 1000)
 */
