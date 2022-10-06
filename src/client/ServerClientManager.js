@@ -21,6 +21,9 @@ export class ServerClientManager {
   clientDestroyed(client) {
     let clientId = client.id
     this.map.delete(clientId)
+    if (client.rank === 3 && client.ip.isWhitelisted() && this.server.lockdown) {
+      this.server.checkLockdown()
+    }
   }
 
   createClient(ws) {

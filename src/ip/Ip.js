@@ -77,4 +77,8 @@ export class Ip {
     if (time === -1 || time >= Date.now()) this.kick()
     this.server.adminMessage(`DEVBanned IP: ${this.ip}, until T${time}`)
   }
+
+  isWhitelisted() {
+    return this.whitelist === this.server.whitelistId
+  }
 }

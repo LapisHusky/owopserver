@@ -11,9 +11,11 @@ This is a server for https://ourworldofpixels.com. It's written in Node.js and d
 
 ## About
 I made this mostly as a fun project to see if I could. I've coded in OWOP for a decent amount of time, but only ever from the client's side.
-Seeing that the main server sometimes had issues with lag and other OWOP servers I've found also did, I set out to write a better server that would have a lot less of those issues.
+Seeing that the official server often had issues with lag and other OWOP servers I've found also did, I set out to write a better server that would have a lot less of those issues.
 A decent amount of benchmarking went into this to optimize some of the more heavily used parts of the server, such as chunk loading.
 Of course, being in an interpreted language, there is going to be some slowdown compared to the official server which in C++. Hopefully other optimizations I've made can make up for that difference, or at least get close.
+
+This includes: support for all tools, all user and moderator commands, most world properties, banning, captcha, HTTP api without some of the secret messages, and a good portion of the admin commands.
 
 ### How does this server improve performance?
 - Uses `uWebSockets.js` for speedy websocket message and connection handling, significantly faster than `ws` or `socket.io`
@@ -25,6 +27,4 @@ Of course, being in an interpreted language, there is going to be some slowdown 
 
 ### Feature requests and bug reports
 You can propose features to me on Discord: Lapis#7110
-There's a good chance I won't add it though.
-
 If you find a bug or issue, let me know through Discord and I will most likely fix it.

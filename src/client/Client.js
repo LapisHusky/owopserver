@@ -172,6 +172,12 @@ export class Client {
       }
       this.ip.setProp("banExpiration", 0)
     }
+    let isWhitelisted = this.ip.isWhitelisted()
+    if (this.server.lockdown && !isWhitelisted) {
+      client.sendString("Sorry, the server is not accepting new connections right now.")
+      this.destroy()
+      return
+    }
     if (this.ip.tooManyClients()) {
       this.sendString(`Sorry, but you have reached the maximum number of simultaneous connections, (${this.server.config.maxConnectionsPerIp}).`)
       this.destroy()
@@ -184,7 +190,7 @@ export class Client {
         break
       }
       case 1: {
-        requiresVerification = this.ip.whitelist === this.server.whitelistId
+        requiresVerification = !isWhitelisted
         break
       }
       case 2: {

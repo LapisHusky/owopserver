@@ -28,6 +28,7 @@ export class Server {
     this.stats = new StatsTracker(this)
 
     this.whitelistId = miscData.whitelistId
+    this.lockdown = false
     
     this.destroyed = false
   }
@@ -111,6 +112,9 @@ export class Server {
         }
       }
     })
+    server.any("/api/*", async (res, req) => {
+
+    })
     server.any("/*", (res, req) => {
       res.writeStatus("400 Bad Request")
       res.end()
@@ -159,8 +163,15 @@ export class Server {
     }
   }
 
-  broadcastMessage(message) {
-    let arrayBuffer = textEncoder.encode(message).buffer
+  broadcastBuffer(buffer) {
+    let arrayBuffer = buffer.buffer
+    for (let client of this.clients.map.values()) {
+      client.ws.send(arrayBuffer, true)
+    }
+  }
+
+  broadcastString(string) {
+    let arrayBuffer = textEncoder.encode(string).buffer
     for (let client of this.clients.map.values()) {
       client.ws.send(arrayBuffer, false)
     }
@@ -179,6 +190,27 @@ export class Server {
       count++
     }
     return count
+  }
+
+  setLockdown(state) {
+    this.lockdown = state
+    this.adminMessage(`DEVLockdown mode ${state ? "enabled" : "disabled"}.`)
+    if (!state) return
+    for (let client of this.clients.map.values()) {
+      if (client.rank < 3) continue
+      if (client.ip.whitelistId === this.whitelistId) continue
+      client.ip.setProp("whitelist", this.whitelistId)
+    }
+  }
+
+  checkLockdown() {
+    for (let client of this.clients.map.values()) {
+      if (client.rank < 3) continue
+      if (client.ip.whitelistId !== this.whitelistId) continue
+      return
+    }
+    //if we made it through the for loop, then there are no whitelisted admins
+    this.setLockdown(false)
   }
 }
 
