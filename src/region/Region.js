@@ -55,6 +55,8 @@ export class Region {
   }
 
   keepAlive(tick) {
+    if (!this.loaded) return true
+    if (this.dataModified) return tick - this.lastHeld < 450
     return tick - this.lastHeld < 150
   }
 
