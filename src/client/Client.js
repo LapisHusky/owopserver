@@ -5,11 +5,11 @@ import { handleCommand } from "../commands/commandHandler.js"
 let textEncoder = new TextEncoder()
 let textDecoder = new TextDecoder()
 
-let minChunkCoord = ~1048575
-let maxChunkCoord = 1048575
+let minChunkCoord = ~0xFFFFF
+let maxChunkCoord = 0xFFFFF
 
-let minPixelCoord = ~16777215
-let maxPixelCoord = 16777215
+let minPixelCoord = ~0xFFFFFF
+let maxPixelCoord = 0xFFFFFF
 
 let maxMessageLengths = [
   128,
@@ -36,10 +36,10 @@ export class Client {
     this.world = null
     this.uid = null
     let pquota = this.server.config.defaultPquota.split(",").map(value => parseInt(value))
-    this.pquota = new Quota(pquota[0], pquota[1], tick, true)
-    this.cquota = new Quota(4, 6, tick, false)
+    this.pquota = new Quota(pquota[0], pquota[1], tick, true, true)
+    this.cquota = new Quota(4, 6, tick, false, false)
     let regionloadquota = this.server.config.regionloadquota.split(",").map(value => parseInt(value))
-    this.regionloadquota = new Quota(regionloadquota[0], regionloadquota[1], tick, false)
+    this.regionloadquota = new Quota(regionloadquota[0], regionloadquota[1], tick, false, false)
     this.captchaState = null
     this.joiningWorld = false
     this.nick = null

@@ -1,6 +1,6 @@
 {
   "defaultPquota": "48,4",
-  "captchaSecurity": 0,
+  "captchaSecurity": 1,
   "maxConnectionsPerIp": 4,
   "motd": "owo wat dis?!",
   "appealMessage": "Appeal on the OWOP discord server, ( http://owop.me/discord )",

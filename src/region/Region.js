@@ -55,8 +55,12 @@ export class Region {
   }
 
   keepAlive(tick) {
+    //always keep this region if it hasn't been loaded yet, otherwise bugs could occur from clients awaiting loading
     if (!this.loaded) return true
+    //if the region has been modified, keep it around a little longer because it may be modified again
     if (this.dataModified) return tick - this.lastHeld < 450
+    //if it hasn't been modified, this might just be a region someone is passing through and won't need again
+    //so destroy it after a shorter period
     return tick - this.lastHeld < 150
   }
 
@@ -111,6 +115,7 @@ export class Region {
       }
     }
     chunkBufferA.writeUint16LE((aBufIndex - 14) / 2, 12)
+    //must be allocUnsafeSlow and do copying manually, otherwise buffer pool gets used and the arrayBuffer contains extra data that uWS would send
     let out = Buffer.allocUnsafeSlow(aBufIndex + bBufIndex)
     chunkBufferA.copy(out)
     chunkBufferB.copy(out, aBufIndex)
@@ -125,18 +130,18 @@ export class Region {
   setPixel(client, x, y, r, g, b) {
     this.lastHeld = this.server.currentTick
     let chunkId = (y & 0xf0) + (x >> 4)
-    if (client.rank < 2 && this.protection[chunkId]) return
     let chunkRelativePos = ((y & 0xf) << 4) + (x & 0xf)
     let bufferPos = ((chunkId << 8) | chunkRelativePos) * 3
     if (this.pixels[bufferPos] === r && this.pixels[bufferPos + 1] === g && this.pixels[bufferPos + 2] === b) return
-    if (this.world.pixelUpdates.length >= 65536) return
+    if (client.rank < 2 && this.protection[chunkId]) return
+    if (this.world.pixelUpdates.length >= 65535) return
     this.server.stats.currentPixelsPlaced++
     this.pixels[bufferPos] = r
     this.pixels[bufferPos + 1] = g
     this.pixels[bufferPos + 2] = b
     this.dataModified = true
-    let realX = this.x * 256 + x
-    let realY = this.y * 256 + y
+    let realX = (this.x << 4) + x
+    let realY = (this.y << 4) + y
     let buffer = Buffer.allocUnsafe(15)
     buffer.writeUint32LE(client.uid, 0)
     buffer.writeInt32LE(realX, 4)

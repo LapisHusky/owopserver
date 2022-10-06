@@ -225,9 +225,9 @@ commands.set("setrank", {
     }
     target.setRank(rank)
     if (rank === 3) {
-      client.server.adminMessage(`DEV${target.uid} (${target.world.name}, ${target.ip.ip}) Got admin from ${client.uid} (${client.ip.ip})`)
+      client.server.adminMessage(`DEV${target.uid} (${target.world.name}, ${target.ip.ip}) Got admin from setrank`)
     } else if (rank === 2) {
-      client.server.adminMessage(`DEV${target.uid} (${target.world.name}, ${target.ip.ip}) Got mod from ${client.uid} (${client.ip.ip})`)
+      client.server.adminMessage(`DEV${target.uid} (${target.world.name}, ${target.ip.ip}) Got mod from setrank`)
     }
     client.sendString(`Set user's (${target.uid}) rank to: ${rank}`)
   }
