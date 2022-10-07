@@ -177,6 +177,7 @@ export class Region {
 
   protectChunk(chunkLocation, isProtected) {
     this.lastHeld = this.server.currentTick
+    if (this.protection[chunkLocation] === isProtected) return
     this.dataModified = true
     this.protection[chunkLocation] = isProtected
     let buffer = Buffer.allocUnsafeSlow(10)
