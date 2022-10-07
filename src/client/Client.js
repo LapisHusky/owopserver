@@ -35,6 +35,7 @@ export class Client {
     this.uid = null
     let pquota = this.server.config.defaultPquota.split(",").map(value => parseInt(value))
     this.pquota = new Quota(pquota[0], pquota[1])
+    this.protectquota = new Quota(5000, 7)
     this.pquota.deplete()
     this.cquota = new Quota(4, 6)
     this.regionloadquota = new Quota(350, 5)
@@ -375,7 +376,7 @@ export class Client {
         if (this.rank < 2) return
         if (this.rank < 3) {
           if (this.world.simpleMods) return
-          if (!this.pquota.canSpend()) return
+          if (!this.protectquota.canSpend()) return
         }
         let chunkX = message.readInt32LE(0)
         if (chunkX > maxChunkCoord || chunkX < minChunkCoord) {
