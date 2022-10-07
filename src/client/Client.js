@@ -630,6 +630,6 @@ export class Client {
     this.lastUpdate = tick
     this.sentX = this.x
     this.sentY = this.y
-    if (!this.stealth) this.world.playerUpdates.push(this)
+    if (!this.stealth) this.world.playerUpdates.add(this)
   }
 }

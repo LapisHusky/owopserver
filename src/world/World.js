@@ -44,9 +44,9 @@ export class World {
 
     //update stuff
     this.updateAllPlayers = false
-    this.playerUpdates = []
+    this.playerUpdates = new Set()
     this.pixelUpdates = []
-    this.playerDisconnects = []
+    this.playerDisconnects = new Set()
 
     this.lastHeld = this.server.currentTick
     this.destroyed = false
@@ -124,7 +124,8 @@ export class World {
 
   removeClient(client) {
     this.clients.delete(client.uid)
-    this.playerDisconnects.push(client.uid)
+    this.playerDisconnects.add(client.uid)
+    this.playerUpdates.delete(client)
     if (this.clients.size === 0) this.lastHeld = this.server.currentTick
   }
 
@@ -151,21 +152,21 @@ export class World {
   }
 
   tick(tick) {
-    if (!this.updateAllPlayers && this.playerUpdates.length === 0 && this.pixelUpdates.length === 0 && this.playerDisconnects.length === 0) return
+    if (!this.updateAllPlayers && this.playerUpdates.size === 0 && this.pixelUpdates.length === 0 && this.playerDisconnects.size === 0) return
     if (this.updateAllPlayers) {
-      let array = []
+      this.updateAllPlayers = false
       for (let client of this.clients.values()) {
-        if (!client.stealth) array.push(client)
+        if (!client.stealth) this.playerUpdates.add(client)
       }
-      this.playerUpdates = array
     }
-    let playerUpdateCount = this.playerUpdates.length
+    let playerUpdateCount = Math.min(this.playerUpdates.size, 255)
     let pixelUpdateCount = this.pixelUpdates.length
-    let disconnectCount = this.playerDisconnects.length
+    let disconnectCount = Math.min(this.playerDisconnects.size, 255)
     let buffer = Buffer.allocUnsafeSlow(playerUpdateCount * 16 + pixelUpdateCount * 15 + disconnectCount * 4 + 5)
     buffer[0] = 0x01
     buffer[1] = playerUpdateCount
     let pos = 2
+    let count = 0
     for (let client of this.playerUpdates) {
       buffer.writeUint32LE(client.uid, pos)
       pos += 4
@@ -177,6 +178,8 @@ export class World {
       buffer[pos++] = client.g
       buffer[pos++] = client.b
       buffer[pos++] = client.tool
+      this.playerUpdates.delete(client)
+      if (++count === 255) break
     }
     buffer.writeUint16LE(pixelUpdateCount, pos)
     pos += 2
@@ -185,14 +188,14 @@ export class World {
       pos += 15
     }
     buffer[pos++] = disconnectCount
+    count = 0
     for (let id of this.playerDisconnects) {
       buffer.writeUint32LE(id, pos)
       pos += 4
+      this.playerDisconnects.delete(id)
+      if (++count === 255) break
     }
-    this.updateAllPlayers = false
-    this.playerUpdates = []
     this.pixelUpdates = []
-    this.playerDisconnects = []
     this.broadcastBuffer(buffer)
   }
 

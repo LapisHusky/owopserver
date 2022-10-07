@@ -762,8 +762,8 @@ commands.set("setprop", {
       }
       case "maxPlayers": {
         valueToSet = parseInt(valueInput)
-        if (!(valueToSet >= 1 && valueToSet <= 255)) {
-          client.sendString("Error: Invalid limit, must be between 1 and 255.")
+        if (!(valueToSet > 0)) {
+          client.sendString("Error: Invalid limit, must be greater than 0.")
           return
         }
         break
