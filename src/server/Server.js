@@ -20,6 +20,8 @@ export class Server {
 
     this.listenSocket = null
     this.wsServer = this.createServer()
+    this.globalTopic = Uint8Array.from([0x00]).buffer
+    this.adminTopic = Uint8Array.from([0x01]).buffer
 
     this.currentTick = 0
     this.nextTickTime = performance.now() + 1000 / 15
@@ -87,6 +89,7 @@ export class Server {
         }
       },
       open: ws => {
+        ws.subscribe(this.globalTopic)
         try {
           this.stats.totalConnections++
           let client = this.clients.createClient(ws)
@@ -157,24 +160,17 @@ export class Server {
 
   adminMessage(message) {
     let arrayBuffer = textEncoder.encode(message).buffer
-    for (let client of this.clients.map.values()) {
-      if (client.rank < 3) continue
-      client.ws.send(arrayBuffer, false)
-    }
+    this.wsServer.publish(this.adminTopic, arrayBuffer, true)
   }
 
   broadcastBuffer(buffer) {
     let arrayBuffer = buffer.buffer
-    for (let client of this.clients.map.values()) {
-      client.ws.send(arrayBuffer, true)
-    }
+    this.wsServer.publish(this.globalTopic, arrayBuffer, true)
   }
 
   broadcastString(string) {
     let arrayBuffer = textEncoder.encode(string).buffer
-    for (let client of this.clients.map.values()) {
-      client.ws.send(arrayBuffer, false)
-    }
+    this.wsServer.publish(this.globalTopic, arrayBuffer, false)
   }
 
   resetWhitelist() {
@@ -215,12 +211,15 @@ export class Server {
 }
 
 //simple way to keep track of the server's performance
-/*
-let usage = process.cpuUsage().user
+
+let userUsage = process.cpuUsage().user
+let systemUsage = process.cpuUsage().system
 setInterval(() => {
-  let newUsage = process.cpuUsage().user
-  let diff = newUsage - usage
-  usage = newUsage
-  console.log(diff / 1000000)
+  let newUserUsage = process.cpuUsage().user
+  let userDiff = newUserUsage - userUsage
+  userUsage = newUserUsage
+  let newSystemUsage = process.cpuUsage().system
+  let systemDiff = newSystemUsage - systemUsage
+  systemUsage = newSystemUsage
+  console.log(userDiff / 1000000, systemDiff / 1000000)
 }, 1000)
-*/

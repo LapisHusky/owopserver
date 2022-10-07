@@ -28,18 +28,16 @@ export class Client {
 
     this.ip.addClient(this)
 
-    let tick = this.server.currentTick
-
     this.lastUpdate = null
-    this.connectionTick = tick
+    this.connectionTick = this.server.currentTick
     this.rank = 0
     this.world = null
     this.uid = null
     let pquota = this.server.config.defaultPquota.split(",").map(value => parseInt(value))
-    this.pquota = new Quota(pquota[0], pquota[1], tick, true, true)
-    this.cquota = new Quota(4, 6, tick, false, false)
-    let regionloadquota = this.server.config.regionloadquota.split(",").map(value => parseInt(value))
-    this.regionloadquota = new Quota(regionloadquota[0], regionloadquota[1], tick, false, false)
+    this.pquota = new Quota(pquota[0], pquota[1])
+    this.pquota.deplete()
+    this.cquota = new Quota(4, 6)
+    this.regionloadquota = new Quota(350, 5)
     this.captchaState = null
     this.joiningWorld = false
     this.nick = null
@@ -113,7 +111,7 @@ export class Client {
   }
 
   setPquota(amount, seconds) {
-    this.pquota.setParams(amount, seconds, this.server.currentTick)
+    this.pquota.setParams(amount, seconds)
     let buffer = Buffer.allocUnsafeSlow(5)
     buffer[0] = 0x06
     buffer.writeUint16LE(amount, 1)
@@ -123,6 +121,11 @@ export class Client {
 
   setRank(rank) {
     if (rank === this.rank) return
+    if (rank === 3) {
+      this.ws.subscribe(this.server.adminTopic)
+    } else if (this.rank === 3 && rank < 3) {
+      this.ws.unsubscribe(this.server.adminTopic)
+    }
     let pquota
     if (this.world.pquota) {
       pquota = this.world.pquota
@@ -144,7 +147,7 @@ export class Client {
         break
       }
     }
-    this.setPquota(pquota[0], pquota[1], this.server.currentTick)
+    this.setPquota(pquota[0], pquota[1])
     this.rank = rank
     let buffer = Buffer.allocUnsafeSlow(2)
     buffer[0] = 0x04
@@ -265,7 +268,7 @@ export class Client {
           return
         }
         if (this.rank < 3) {
-          if (!this.pquota.canSpend(this.server.currentTick)) return
+          if (!this.pquota.canSpend()) return
           let xDistance = (x >> 4) - (this.x >> 8)
           let yDistance = (y >> 4) - (this.y >> 8)
           let distance = Math.sqrt(Math.pow(xDistance, 2) + Math.pow(yDistance, 2))
@@ -302,7 +305,7 @@ export class Client {
             }
             return
           }
-          if (!this.pquota.canSpend(this.server.currentTick)) return
+          if (!this.pquota.canSpend()) return
         }
         let chunkX = message.readInt32LE(0)
         if (chunkX > maxChunkCoord || chunkX < minChunkCoord) {
@@ -336,7 +339,7 @@ export class Client {
         if (this.rank < 2) return
         if (this.rank < 3) {
           if (this.world.simpleMods) return
-          if (!this.pquota.canSpend(this.server.currentTick)) return
+          if (!this.pquota.canSpend()) return
         }
         let chunkX = message.readInt32LE(0)
         if (chunkX > maxChunkCoord || chunkX < minChunkCoord) {
@@ -372,7 +375,7 @@ export class Client {
         if (this.rank < 2) return
         if (this.rank < 3) {
           if (this.world.simpleMods) return
-          if (!this.pquota.canSpend(this.server.currentTick)) return
+          if (!this.pquota.canSpend()) return
         }
         let chunkX = message.readInt32LE(0)
         if (chunkX > maxChunkCoord || chunkX < minChunkCoord) {
@@ -451,7 +454,7 @@ export class Client {
 
   handleUnloaded(region) {
     if (!region.beganLoading) {
-      if (this.rank < 3 && !this.regionloadquota.canSpend(this.server.currentTick)) {
+      if (this.rank < 3 && !this.regionloadquota.canSpend()) {
         this.server.adminMessage(`DEVKicked ${this.uid} (${this.world.name}, ${this.ip.ip}) for loading too many regions`)
         this.destroy()
         return false
@@ -572,7 +575,7 @@ export class Client {
       this.setCaptchaState(0x03)
       return
     }
-    if (!this.ip.captchaquota.canSpend(this.server.currentTick)) {
+    if (!this.ip.captchaquota.canSpend()) {
       this.sendString("You've done too many captchas recently. Try again in a few seconds.")
       this.destroy()
       return
@@ -590,7 +593,7 @@ export class Client {
   }
 
   handleString(message) {
-    if (this.rank < 3 && !this.cquota.canSpend(this.server.currentTick)) return
+    if (this.rank < 3 && !this.cquota.canSpend()) return
     message = textDecoder.decode(message)
     if (!message.endsWith("\n")) {
       this.destroy()

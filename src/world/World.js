@@ -8,6 +8,11 @@ export class World {
     this.server = serverWorldManager.server
 
     this.name = name
+    let nameBuffer = Buffer.from(name)
+    let topicBuffer = Buffer.allocUnsafeSlow(nameBuffer.length + 1)
+    topicBuffer[0] = 0x02
+    nameBuffer.copy(topicBuffer, 1)
+    this.wsTopic = topicBuffer.buffer
 
     this.clients = new Map()
     this.regions = new Map()
@@ -88,16 +93,12 @@ export class World {
 
   broadcastBuffer(buffer) {
     let arrayBuffer = buffer.buffer
-    for (let client of this.clients.values()) {
-      client.ws.send(arrayBuffer, true)
-    }
+    this.server.wsServer.publish(this.wsTopic, arrayBuffer, true)
   }
 
   broadcastString(string) {
     let arrayBuffer = textEncoder.encode(string).buffer
-    for (let client of this.clients.values()) {
-      client.ws.send(arrayBuffer, false)
-    }
+    this.server.wsServer.publish(this.wsTopic, arrayBuffer, false)
   }
 
   isFull() {
@@ -108,15 +109,16 @@ export class World {
     let id = this.incrementingId++
     this.clients.set(id, client)
     client.world = this
+    client.ws.subscribe(this.wsTopic)
     client.setUid(id)
     if (this.motd !== null) client.sendString(this.motd)
     client.lastUpdate = this.server.currentTick
     this.updateAllPlayers = true
+    if (this.restricted) return
     if (this.pass) {
       client.sendString("[Server] This world has a password set. Use '/pass PASSWORD' to unlock drawing.")
       return
     }
-    if (this.restricted) return
     client.setRank(1)
   }
 

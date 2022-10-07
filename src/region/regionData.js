@@ -1,4 +1,9 @@
-export function loadProtection(data) {
+import { deflateRawSync, inflateRawSync } from "zlib"
+
+export function loadData(region, data) {
+  data = inflateRawSync(data)
+
+  //protection
   let protectionData = Buffer.allocUnsafe(256)
   for (let i = 0; i < 32; i++) {
     let protectionIndex = i * 8
@@ -11,10 +16,10 @@ export function loadProtection(data) {
     protectionData[protectionIndex + 6] = (data[i] & 0b00000010) >> 1
     protectionData[protectionIndex + 7] = (data[i] & 0b00000001)
   }
-  return protectionData
-}
+  region.protection = protectionData
 
-export function loadPixels(data) {
+  //pixels
+  data = data.subarray(32)
   const result = Buffer.allocUnsafe(196608)
 
   let arrayPosition = 0
@@ -86,7 +91,7 @@ export function loadPixels(data) {
     result[pixelPosition + 2] = blue
   }
 
-  return result
+  region.pixels = result
 }
 
 export function saveData(protection, pixels) {
@@ -171,5 +176,5 @@ export function saveData(protection, pixels) {
   }
 
   // return a Buffer trimmed to the correct length
-  return result.subarray(0, p)
+  return deflateRawSync(result.subarray(0, p))
 }

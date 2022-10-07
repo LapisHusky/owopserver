@@ -1,4 +1,4 @@
-import { loadProtection, loadPixels, saveData } from "./regionData.js"
+import { loadData, saveData } from "./regionData.js"
 
 let chunkBufferA = Buffer.allocUnsafeSlow(184)
 chunkBufferA[0] = 0x02
@@ -41,8 +41,7 @@ export class Region {
       this.protection = Buffer.alloc(256)
       return
     }
-    this.protection = loadProtection(data.subarray(0, 32))
-    this.pixels = loadPixels(data.subarray(32))
+    loadData(this, data)
   }
 
   destroy() {
@@ -140,8 +139,8 @@ export class Region {
     this.pixels[bufferPos + 1] = g
     this.pixels[bufferPos + 2] = b
     this.dataModified = true
-    let realX = (this.x << 4) + x
-    let realY = (this.y << 4) + y
+    let realX = (this.x << 8) + x
+    let realY = (this.y << 8) + y
     let buffer = Buffer.allocUnsafe(15)
     buffer.writeUint32LE(client.uid, 0)
     buffer.writeInt32LE(realX, 4)

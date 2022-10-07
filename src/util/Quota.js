@@ -1,33 +1,39 @@
 export class Quota {
-  constructor(amount, seconds, currentTick, depleted, smallBoost) {
-    this.smallBoost = smallBoost
-    //smallBoost is implemented for pquota, makes the cap a little higher so lag and tick imperfection doesn't cause pixels to fail
-    this.remaining = depleted ? (smallBoost ? amount * 0.1 : 0) : amount
-    this.amountPerTick = amount / (seconds * 15)
-    this.cap = amount * (smallBoost ? 1.1 : 1)
-    this.lastTick = currentTick
+  constructor(amount, seconds) {
+    this.remaining = amount
+    this.amountPerSecond = amount / seconds
+    this.amount = amount
+    this.lastTime = currentTime
   }
 
-  canSpend(currentTick) {
-    this.remaining += this.amountPerTick * (currentTick - this.lastTick)
-    this.lastTick = currentTick
+  canSpend() {
+    this.remaining += this.amountPerSecond * (currentTime - this.lastTime)
+    this.lastTime = currentTime
     if (this.remaining < 1) return false
-    if (this.remaining > this.cap) this.remaining = this.cap
+    if (this.remaining > this.amount) this.remaining = this.amount
     this.remaining--
     return true
   }
   
-  deplete(currentTick) {
+  deplete() {
     this.remaining = 0
-    this.lastTick = currentTick
+    this.lastTime = currentTime
   }
 
-  setParams(amount, seconds, currentTick) {
-    this.remaining += this.amountPerTick * (currentTick - this.lastTick)
-    if (this.remaining > this.cap) this.remaining = this.cap
-    this.cap = amount * (this.smallBoost ? 1.1 : 1)
-    this.amountPerTick = amount / (seconds * 15)
-    this.lastTick = currentTick
-    if (this.remaining > this.cap) this.remaining = this.cap
+  setParams(amount, seconds) {
+    this.remaining += this.amountPerSecond * (currentTime - this.lastTime)
+    if (this.remaining > this.amount) this.remaining = this.amount
+    this.amount = amount
+    this.amountPerSecond = amount / seconds
+    this.lastTime = currentTime
+    if (this.remaining > amount) this.remaining = amount
   }
 }
+
+//this is slightly faster than calling performance.now() every check
+//Date.now() is faster than performance.now(), but can be put off when the system time re-syncs
+let currentTime = performance.now() / 1000
+
+setInterval(() => {
+  currentTime = performance.now() / 1000
+}, 10)

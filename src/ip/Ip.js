@@ -7,10 +7,8 @@ export class Ip {
 
     this.ip = ip
 
-    let tick = this.server.currentTick
-
     this.clients = new Map()
-    this.captchaquota = new Quota(5, 10, tick)
+    this.captchaquota = new Quota(5, 10)
 
     if (data === null) {
       this.banExpiration = 0
@@ -24,7 +22,7 @@ export class Ip {
       this.dataModified = false
     }
 
-    this.lastHeld = tick
+    this.lastHeld = this.server.currentTick
     this.destroyed = false
   }
 
