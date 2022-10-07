@@ -49,7 +49,17 @@ export class Server {
   }
 
   createServer() {
-    let server = uWS.App()
+    let server
+    if (process.env.HTTPS === "true") {
+      let options = {}
+      if (process.env.CERT_FILE_NAME) options.cert_file_name = process.env.CERT_FILE_NAME
+      if (process.env.DH_PARAMS_FILE_NAME) options.dh_params_file_name = process.env.DH_PARAMS_FILE_NAME
+      if (process.env.KEY_FILE_NAME) options.key_file_name = process.env.KEY_FILE_NAME
+      if (process.env.PASSPHRASE) options.passphrase = process.env.PASSPHRASE
+      server = uWS.SSLApp(options)
+    } else {
+      server = uWS.App()
+    }
     server.ws("/*", {
       maxPayloadLength: 1 << 15,
       maxBackpressure: 2 << 21,
@@ -218,7 +228,7 @@ export class Server {
   }
 }
 
-//simple way to keep track of the server's performance
+//simple way to watch the server's performance
 /*
 let userUsage = process.cpuUsage().user
 let systemUsage = process.cpuUsage().system

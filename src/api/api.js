@@ -21,7 +21,7 @@ export async function handleRequest(server, res, req) {
         await getPlayerInfo(server, res, req)
         return
       default:
-        res.end('\"Unknown request\"')
+        res.end('"Unknown request"')
     }
   } catch (error) {
     console.log(error)
