@@ -40,6 +40,7 @@ export class Server {
   async destroy() {
     if (this.destroyed) return
     this.destroyed = true
+    this.adminMessage("DEVServer shutdown initiated")
     clearTimeout(this.tickTimeout)
     if (this.listenSocket) uWS.us_listen_socket_close(this.listenSocket)
     this.clients.destroy()
@@ -151,17 +152,22 @@ export class Server {
     this.nextTickTime = this.nextTickTime + 1000 / 15
     this.setTickTimeout()
 
-    //every 10 seconds
-    let semiMajorTick = (tick % 15) === 0
-    //every hour
-    let majorTick = (tick % 54000) === 0
-
-    if (semiMajorTick) {
+    //every second
+    if ((tick % 15) === 0) {
       this.clients.tickExpiration(tick)
       this.worlds.tickExpiration(tick)
       this.ips.tickExpiration(tick)
     }
-    if (majorTick) {
+    //every minute
+    if ((tick % 900)) {
+      if (process.env.PINGS === "true") {
+        for (let client of this.clients.map.values()) {
+          client.ws.ping()
+        }
+      }
+    }
+    //every hour
+    if ((tick % 54000) === 0) {
       this.stats.tickPixels()
     }
     this.clients.tick(tick)

@@ -993,3 +993,12 @@ commands.set("sayraw", {
     client.world.broadcastString(args)
   }
 })
+commands.set("endprocess", {
+  minRank: 3,
+  hidden: false,
+  eval: async function (client, args, argsSplit) {
+    client.sendString("Gracefully shutting down server")
+    await client.server.destroy()
+    process.exit()
+  }
+})
