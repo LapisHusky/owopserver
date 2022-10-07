@@ -134,7 +134,7 @@ commands.set("tp", {
   minRank: 2,
   hidden: false,
   eval: function (client, args, argsSplit) {
-    if (argsSplit.length < 1 || argsSplit.length > 3 || argsSplit.some(string => !string.match(/^\d+$/))) {
+    if (argsSplit.length < 1 || argsSplit.length > 3 || argsSplit.some(string => !string.match(/^-?\d+$/))) {
       client.sendString("Usage: /tp [ID] or /tp X Y or /tp [ID] X Y")
       return
     }
