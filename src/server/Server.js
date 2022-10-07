@@ -65,7 +65,8 @@ export class Server {
     server.ws("/*", {
       maxPayloadLength: 1 << 15,
       maxBackpressure: 2 << 21,
-      idleTimeout: 0,
+      idleTimeout: process.env.PINGS === "true" ? 60 : 0,
+      sendPingsAutomatically: true,
       upgrade: async (res, req, context) => {
         try {
           //read headers
@@ -157,14 +158,6 @@ export class Server {
       this.clients.tickExpiration(tick)
       this.worlds.tickExpiration(tick)
       this.ips.tickExpiration(tick)
-    }
-    //every minute
-    if ((tick % 900)) {
-      if (process.env.PINGS === "true") {
-        for (let client of this.clients.map.values()) {
-          client.ws.ping()
-        }
-      }
     }
     //every hour
     if ((tick % 54000) === 0) {
