@@ -5,6 +5,7 @@ import { ServerWorldManager } from "../world/ServerWorldManager.js"
 import { StatsTracker } from "../stats/StatsTracker.js"
 import { ServerRegionManager } from "../region/ServerRegionManager.js"
 import { data as miscData, saveAndClose } from "./miscData.js"
+import { handleRequest as handleApiRequest } from "../api/api.js"
 
 let textEncoder = new TextEncoder()
 let textDecoder = new TextDecoder()
@@ -115,9 +116,7 @@ export class Server {
         }
       }
     })
-    server.any("/api/*", async (res, req) => {
-
-    })
+    this.createApiHandlers(server)
     server.any("/*", (res, req) => {
       res.writeStatus("400 Bad Request")
       res.end()
@@ -194,7 +193,7 @@ export class Server {
     if (!state) return
     for (let client of this.clients.map.values()) {
       if (client.rank < 3) continue
-      if (client.ip.whitelistId === this.whitelistId) continue
+      if (client.ip.isWhitelisted()) continue
       client.ip.setProp("whitelist", this.whitelistId)
     }
   }
@@ -202,16 +201,25 @@ export class Server {
   checkLockdown() {
     for (let client of this.clients.map.values()) {
       if (client.rank < 3) continue
-      if (client.ip.whitelistId !== this.whitelistId) continue
+      if (client.ip.isWhitelisted()) continue
       return
     }
     //if we made it through the for loop, then there are no whitelisted admins
     this.setLockdown(false)
   }
+
+  createApiHandlers(server) {
+    server.any("/api", (res, req) => {
+      handleApiRequest(this, res, req)
+    })
+    server.any("/api/*", (res, req) => {
+      handleApiRequest(this, res, req)
+    })
+  }
 }
 
 //simple way to keep track of the server's performance
-
+/*
 let userUsage = process.cpuUsage().user
 let systemUsage = process.cpuUsage().system
 setInterval(() => {
@@ -223,3 +231,4 @@ setInterval(() => {
   systemUsage = newSystemUsage
   console.log(userDiff / 1000000, systemDiff / 1000000)
 }, 1000)
+*/

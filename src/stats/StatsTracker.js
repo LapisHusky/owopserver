@@ -14,4 +14,8 @@ export class StatsTracker {
     this.pixelsPlacedPerHour.push(this.currentPixelsPlaced)
     this.currentPixelsPlaced = 0
   }
+  
+  getUptime() {
+    return Math.round(performance.now() - this.startTime)
+  }
 }
