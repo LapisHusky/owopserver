@@ -6,6 +6,7 @@ import { StatsTracker } from "../stats/StatsTracker.js"
 import { ServerRegionManager } from "../region/ServerRegionManager.js"
 import { data as miscData, saveAndClose } from "./miscData.js"
 import { handleRequest as handleApiRequest } from "../api/api.js"
+import { getIpFromHeader } from "../util/util.js"
 
 let textEncoder = new TextEncoder()
 let textDecoder = new TextDecoder()
@@ -79,7 +80,7 @@ export class Server {
           //async get ip data, then upgrade
           let ip
           if (process.env.IS_PROXIED === "true") {
-            ip = req.getHeader(process.env.REAL_IP_HEADER)
+            ip = getIpFromHeader(req.getHeader(process.env.REAL_IP_HEADER))
           } else {
             ip = textDecoder.decode(res.getRemoteAddressAsText())
           }

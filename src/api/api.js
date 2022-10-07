@@ -1,3 +1,5 @@
+import { getIpFromHeader } from "../util/util.js"
+
 let textDecoder = new TextDecoder()
 
 export async function handleRequest(server, res, req) {
@@ -35,7 +37,7 @@ async function printStatus(server, res, req) {
   })
   let ip
   if (process.env.IS_PROXIED === "true") {
-    ip = req.getHeader(process.env.REAL_IP_HEADER)
+    ip = getIpFromHeader(req.getHeader(process.env.REAL_IP_HEADER))
   } else {
     ip = textDecoder.decode(res.getRemoteAddressAsText())
   }
@@ -59,7 +61,7 @@ async function printStatus(server, res, req) {
 function disconnectUser(server, res, req) {
   let ip
   if (process.env.IS_PROXIED === "true") {
-    ip = req.getHeader(process.env.REAL_IP_HEADER)
+    ip = getIpFromHeader(req.getHeader(process.env.REAL_IP_HEADER))
   } else {
     ip = textDecoder.decode(res.getRemoteAddressAsText())
   }
@@ -92,7 +94,7 @@ async function banSelf(server, res, req) {
   })
   let ip
   if (process.env.IS_PROXIED === "true") {
-    ip = req.getHeader(process.env.REAL_IP_HEADER)
+    ip = getIpFromHeader(req.getHeader(process.env.REAL_IP_HEADER))
   } else {
     ip = textDecoder.decode(res.getRemoteAddressAsText())
   }

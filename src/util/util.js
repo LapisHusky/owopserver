@@ -26,3 +26,8 @@ export function parseColor(string) {
   if (!string.match(/^#[A-Fa-f0-9]{6}$/)) return false
   return parseInt(string.substring(1), 16)
 }
+
+export function getIpFromHeader(string) {
+  let ips = string.split(",")
+  return ips[ips.length - 1]
+}
