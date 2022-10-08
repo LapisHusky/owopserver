@@ -65,7 +65,7 @@ export class Server {
     server.ws("/*", {
       maxPayloadLength: 1 << 15,
       maxBackpressure: 2 << 21,
-      idleTimeout: process.env.PINGS === "true" ? 60 : 0,
+      idleTimeout: 60,
       sendPingsAutomatically: true,
       upgrade: async (res, req, context) => {
         try {
