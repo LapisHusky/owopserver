@@ -169,7 +169,7 @@ export class Server {
 
   adminMessage(message) {
     let arrayBuffer = textEncoder.encode(message).buffer
-    this.wsServer.publish(this.adminTopic, arrayBuffer, true)
+    this.wsServer.publish(this.adminTopic, arrayBuffer, false)
   }
 
   broadcastBuffer(buffer) {
