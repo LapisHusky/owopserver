@@ -92,11 +92,13 @@ export class Server {
             res.writeStatus("503 Service Unavailable")
             res.end()
           } else {
-            res.upgrade({
-              origin,
-              ip,
-              closed: false
-            }, secWebSocketKey, secWebSocketProtocol, secWebSocketExtensions, context)
+            res.cork(() => {
+              res.upgrade({
+                origin,
+                ip,
+                closed: false
+              }, secWebSocketKey, secWebSocketProtocol, secWebSocketExtensions, context)
+            })
           }
         } catch (error) {
           console.error(error)
