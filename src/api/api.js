@@ -129,7 +129,9 @@ async function getPlayerInfo(server, res, req) {
   let world = await server.worlds.fetch("main")
   if (aborted) return
   if (password !== world.modpass) {
-    res.end('{"type":"error","data":"no"}')
+    res.cork(() => {
+      res.end('{"type":"error","data":"no"}')
+    })
     return
   }
   if (ip) {
@@ -160,21 +162,29 @@ async function getPlayerInfo(server, res, req) {
       })
     }
     obj.data.connInfo = connInfo
-    res.end(JSON.stringify(obj))
+    res.cork(() => {
+      res.end(JSON.stringify(obj))
+    })
     return
   }
   if (id) {
     let client = world.clients.get(parseInt(id))
     if (!client) {
-      res.end('{"type":"id","data":null}')
+      res.cork(() => {
+        res.end('{"type":"id","data":null}')
+      })
       return
     }
     let obj = {
       type: "id",
       data: client.ip.ip
     }
-    res.end(JSON.stringify(obj))
+    res.cork(() => {
+      res.end(JSON.stringify(obj))
+    })
     return
   }
-  res.end('{"type":"error","data":"bruh what do you want me to do"}')
+  res.cork(() => {
+    res.end('{"type":"error","data":"bruh what do you want me to do"}')
+  })
 }
