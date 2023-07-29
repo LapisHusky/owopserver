@@ -2,7 +2,7 @@
 This is a server for https://ourworldofpixels.com. It's written in Node.js and designed to be more performant than other js OWOP servers out there.
 
 ## How to use
-1. Install Node.js and Yarn
+1. Install Node.js and Yarn (recommended to use the latest LTS version of Node, 20.5.0 as I'm writing this, and the latest version of Yarn, 1.22.19 as I'm writing this)
 2. Clone or download this repo
 3. Rename .env.example to .env, then configure the variables inside of it according to the comments
 4. If you wish, configure some other server properties in config.json
