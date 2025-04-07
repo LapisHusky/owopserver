@@ -1,5 +1,8 @@
 import { deflateRawSync, inflateRawSync } from "zlib"
 
+//https://github.com/phoboslab/qoi/blob/master/qoi.h
+//https://github.com/kchapelier/qoijs/blob/main/src/encode.js
+
 export function loadData(region, data) {
   data = inflateRawSync(data)
 
