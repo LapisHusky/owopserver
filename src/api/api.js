@@ -130,7 +130,7 @@ async function getPlayerInfo(server, res, req) {
   if (aborted) return
   if (password !== world.modpass) {
     res.cork(() => {
-      res.end('{"type":"error","data":"no"}')
+      res.end('{"data":"no","type":"error"}')
     })
     return
   }
