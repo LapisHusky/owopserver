@@ -55,7 +55,9 @@ async function printStatus(server, res, req) {
     yourConns: ip.clients.size,
     banned: ip.banExpiration
   }
-  res.end(JSON.stringify(obj))
+  res.cork(() => {
+      res.end(JSON.stringify(obj))
+  })
 }
 
 function disconnectUser(server, res, req) {
